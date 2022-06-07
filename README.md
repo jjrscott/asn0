@@ -19,24 +19,14 @@ Let's take a simple message in JSON[^base64]:
 The simplest mapping of types it to keep all the value data the same but rewrap that data as an ASN0 message[^plist]:
 
 ```source.plist
-( "Hello", ( "World", "3", "T", <01020304> ) )
+( "Hello", ( "World", "3", "true", <01020304> ) )
 ```
 
 
 or just using hex data values:
 
 ```source.plist
-( <48656C6C 6F>, ( <576F726C 64>, <33>, <54>, <01020304> ) )
-```
-
-```source.plist
-<B4>
-    <85> <4865 6C6C6F>
-    <AD>
-        <85><576F72 6C64>
-        <33>
-        <54>
-        <84> <01020304>
+( <48656C6C 6F>, ( <576F726C 64>, <33>, <74727565>, <01020304> ) )
 ```
 
 Now we have something in the correct form, we can encode it using the wire format ...
@@ -73,6 +63,21 @@ Layout<br>(in binary) | Description
 1. No single length byte option exists for gzip compressed octet message arrays as gzip just isn't worth it below for blobs of 1024 bytes of less.
 2. All sizes are little endian
 3. Single 7 bit [ASCII](https://en.wikipedia.org/wiki/ASCII) values are encoded in without extra space usage
+
+
+### Example
+
+Use the example from earlier, we produce the following:
+
+```
+<B8>
+    <85> <4865 6C6C6F>
+    <B1>
+        <85> <576F72 6C64>
+        <33>
+        <84> <74727565>
+        <84> <01020304>
+```
 
 
 [^abnf]: [Augmented Backus–Naur form](https://en.wikipedia.org/wiki/Augmented_Backus–Naur_form)
