@@ -1,9 +1,17 @@
 # ASN0
 
-ASN0 is an attempt at a degenerate encoding: strings of octets and string of strings of octets, ... Here's the high level schema[^abnf]:
+ASN0 is an attempt at a degenerate encoding, a data struct with one primitive: an array of octets. Here's the high level schema[^abnf]:
 
 ```abnf
-message  = OCTET* / message* / NULL
+message = OCTET* / message* / NULL
+```
+
+```swift
+enum Value {
+    case message([Value])
+    case octets([UInt8])
+    case null
+}
 ```
 
 Fundamentally the goal is **not** to encode types such as integers etc but to allow an incoming octet stream to be **tokenised** and outputted into a tree of sub strings. How those outputted octet strings are mapped to types is **outside** the scope of this specification.
@@ -38,30 +46,19 @@ Now we have something in the correct form, we can encode it using the wire forma
 byte<br>(in binary) | byte<br>(in hex) | Description
 ------------------- | ---------------- | -----------
 0xxx xxxx           | 0x00 - 0x7f      | single octet where MSB is 0
-10xx xxxx           | 0x80 - 0x9f      | octet array
-11xx xxxx           | 0xc0 - 0xff      | message array
-1010 1100           | 0xAC             | null
-
-### Arrays
-
-Layout<br>(in binary) | Description
---------------------- | -----------
-0x xxxx | plain array (octet count 0-31)
-10 1000 | plain array (octet count in next byte) `value + 32`
-10 1001 | plain array (octet count in next 2 bytes) `value + 288
-10 1010 | plain array (octet count in next 3 bytes) `value + 65_824`
-10 1011 | plain array (octet count in next 8 bytes) `value + 16_843_040`
-10 1100 | **reserved &times; 1**
-10 1101 | gzip compressed array (octet count in next 2 bytes)
-10 1110 | gzip compressed array (octet count in next 3 bytes)
-10 1111 | gzip compressed array (octet count in next 8 bytes)
-11 xxxx | **reserved &times; 16**
+1xxx xxxx           | 0x80 - 0xfb      | octet array with length 0-124
+1111 1100           | 0xfc             | octet array continuation
+1111 1101           | 0xfd             | null
+1111 1110           | 0xfe             | end message array
+1111 1111           | 0xff             | begin message array
 
 ### Notes
 
-1. All sizes are little endian
-2. Single 7 bit [ASCII](https://en.wikipedia.org/wiki/ASCII) values are encoded in without extra space usage
-3. No single length byte option exists for gzip compressed octet message arrays as gzip just isn't worth it below blobs of 1024 bytes of less.
+1. Single 7 bit [ASCII](https://en.wikipedia.org/wiki/ASCII) values are encoded in without extra space usage
+
+### Examples
+
+Note that all value to octet encodings are **NOT** no part of this specification
 
 
 Diagnostic | Encoded | Wire
@@ -85,16 +82,15 @@ Diagnostic | Encoded | Wire
 1.1 | 312E31 | 83312E31
 "IETF" | 49455446 | 84494554 46
 "" |  | 80
-["a", {"b": "c"}] | (61, (62, 63)) | C461C262 63
-{"d": "D", "b": "B", "a": "A", "c": "C", "e": "E"} | (61, 41, 64, 44, 63, 43, 65, 45, 62, 42) | CA614164 44634365 456242
+["a", {"b": "c"}] | (61, (62, 63)) | FF61FF62 63FEFE
+{"b": "B", "c": "C", "a": "A", "e": "E", "d": "D"} | (62, 42, 61, 41, 65, 45, 63, 43, 64, 44) | FF624261 41654563 436444FE
 true | 54 | 54
 false | 46 | 46
-null | NULL | AC
-[1, [2, 3]] | (02, (04, 06)) | C402C204 06
-[1, [2, 3], [4, 5]] | (02, (04, 06), (08, 0A)) | C702C204 06C2080A
-[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] | (02, 04, 06, 08, 0A, 0C, 0E, 10, 12, 14, 16, 18, 1A, 1C, 1E, 20, 22, 24, 26, 28, 2A, 2C, 2E, 30, 32) | D9020406 080A0C0E 10121416 181A1C1E 20222426 282A2C2E 3032
-{"b": [2, 3], "a": 1} | (62, (04, 06), 61, 02) | C662C204 066102
-
+null | NULL | FD
+[1, [2, 3]] | (02, (04, 06)) | FF02FF04 06FEFE
+[1, [2, 3], [4, 5]] | (02, (04, 06), (08, 0A)) | FF02FF04 06FEFF08 0AFEFE
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] | (02, 04, 06, 08, 0A, 0C, 0E, 10, 12, 14, 16, 18, 1A, 1C, 1E, 20, 22, 24, 26, 28, 2A, 2C, 2E, 30, 32) | FF020406 080A0C0E 10121416 181A1C1E 20222426 282A2C2E 3032FE
+{"b": [2, 3], "a": 1} | (62, (04, 06), 61, 02) | FF62FF04 06FE6102 FE
 [^abnf]: [Augmented Backus–Naur form](https://en.wikipedia.org/wiki/Augmented_Backus–Naur_form)
 
 
