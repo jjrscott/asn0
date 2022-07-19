@@ -1,6 +1,6 @@
 # ASN0
 
-ASN0 is an attempt at a degenerate encoding, a data struct with one primitive: an array of octets. Here's the high level schema[^abnf]:
+ASN0 is an attempt at a degenerate encoding. Here's the high level schema[^abnf]:
 
 ```abnf
 message = OCTET* / message* / NULL
@@ -49,8 +49,8 @@ byte<br>(in binary) | byte<br>(in hex) | Description
 1xxx xxxx           | 0x80 - 0xfb      | octet array with length 0-124
 1111 1100           | 0xfc             | octet array continuation
 1111 1101           | 0xfd             | null
-1111 1110           | 0xfe             | end message array
-1111 1111           | 0xff             | begin message array
+1111 1110           | 0xfe             | begin message array
+1111 1111           | 0xff             | end message array
 
 ### Notes
 
@@ -82,15 +82,16 @@ Diagnostic | Encoded | Wire
 1.1 | 312E31 | 83312E31
 "IETF" | 49455446 | 84494554 46
 "" |  | 80
-["a", {"b": "c"}] | (61, (62, 63)) | FF61FF62 63FEFE
-{"b": "B", "c": "C", "a": "A", "e": "E", "d": "D"} | (62, 42, 61, 41, 65, 45, 63, 43, 64, 44) | FF624261 41654563 436444FE
-true | 54 | 54
-false | 46 | 46
+["a", {"b": "c"}] | (61, (62, 63)) | FE61FE62 63FFFF
+{"b": "B", "a": "A", "d": "D", "e": "E", "c": "C"} | (65, 45, 63, 43, 64, 44, 61, 41, 62, 42) | FE654563 43644461 416242FF
+true | 74727565 | 84747275 65
+false | 66616C73 65 | 8566616C 7365
 null | NULL | FD
-[1, [2, 3]] | (02, (04, 06)) | FF02FF04 06FEFE
-[1, [2, 3], [4, 5]] | (02, (04, 06), (08, 0A)) | FF02FF04 06FEFF08 0AFEFE
-[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] | (02, 04, 06, 08, 0A, 0C, 0E, 10, 12, 14, 16, 18, 1A, 1C, 1E, 20, 22, 24, 26, 28, 2A, 2C, 2E, 30, 32) | FF020406 080A0C0E 10121416 181A1C1E 20222426 282A2C2E 3032FE
-{"b": [2, 3], "a": 1} | (62, (04, 06), 61, 02) | FF62FF04 06FE6102 FE
+[1, [2, 3]] | (02, (04, 06)) | FE02FE04 06FFFF
+[1, [2, 3], [4, 5]] | (02, (04, 06), (08, 0A)) | FE02FE04 06FFFE08 0AFFFF
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] | (02, 04, 06, 08, 0A, 0C, 0E, 10, 12, 14, 16, 18, 1A, 1C, 1E, 20, 22, 24, 26, 28, 2A, 2C, 2E, 30, 32) | FE020406 080A0C0E 10121416 181A1C1E 20222426 282A2C2E 3032FF
+{"b": [2, 3], "a": 1} | (62, (04, 06), 61, 02) | FE62FE04 06FF6102 FF
+
 [^abnf]: [Augmented Backus–Naur form](https://en.wikipedia.org/wiki/Augmented_Backus–Naur_form)
 
 
